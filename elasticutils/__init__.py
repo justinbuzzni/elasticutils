@@ -1059,6 +1059,10 @@ class S(PythonMixin):
             qs['explain'] = True
 
         self.fields, self.as_list, self.as_dict = fields, as_list, as_dict
+        if qs.has_key('query'):
+            if qs['query'].has_key('query_string'):
+                qs['query']['query_string']['from'] = self.start
+                qs['query']['query_string']['size'] = self.stop - self.start
         return qs
 
     def _build_highlight(self, fields, options):
