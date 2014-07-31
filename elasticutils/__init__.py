@@ -5,13 +5,12 @@ from operator import itemgetter
 
 from pyelasticsearch import ElasticSearch
 
-from elasticutils._version import __version__  # noqa
+#from elasticutils._version import __version__  # noqa
 
 
 log = logging.getLogger('elasticutils')
 
 
-# Note: Don't change these--they're not part of the API.
 DEFAULT_URLS = ['http://localhost:9200']
 DEFAULT_DOCTYPES = None
 DEFAULT_INDEXES = None
@@ -1059,6 +1058,10 @@ class S(PythonMixin):
             qs['explain'] = True
 
         self.fields, self.as_list, self.as_dict = fields, as_list, as_dict
+        if qs.has_key('query'):
+            if qs['query'].has_key('query_string') and self.start!=None and self.stop!=None:
+                qs['query']['query_string']['from'] = self.start
+                qs['query']['query_string']['size'] = self.stop - self.start
         return qs
 
     def _build_highlight(self, fields, options):
@@ -1250,7 +1253,7 @@ class S(PythonMixin):
         Perform the search, then convert that raw format into a
         SearchResults instance and return it.
         """
-        if self._results_cache is None:
+        if not self._results_cache:
             response = self.raw()
             ResultsClass = self.get_results_class()
             results = self.to_python(response.get('hits', {}).get('hits', []))
@@ -1451,7 +1454,7 @@ class S(PythonMixin):
                 facets[key] = [v for v in val['entries']]
             elif val['_type'] == 'date_histogram':
                 facets[key] = [v for v in val['entries']]
-            elif val['_type'] in ('filter', 'query', 'statistical'):
+            elif val['_type'] == 'statistical':
                 facets[key] = val
             else:
                 raise InvalidFacetType(
@@ -1574,7 +1577,7 @@ class MLT(PythonMixin):
         Perform the mlt call, then convert that raw format into a
         SearchResults instance and return it.
         """
-        if self._results_cache is None:
+        if not self._results_cache:
             response = self.raw()
             results = self.to_python(response.get('hits', {}).get('hits', []))
             self._results_cache = DictSearchResults(
@@ -2021,6 +2024,7 @@ class Indexable(object):
            ``refresh_index()``.
 
         """
+        print 'bulk index'
         if es is None:
             es = cls.get_es()
 
